@@ -13,8 +13,13 @@ class User extends Authenticatable implements MustVerifyEmail
 
     protected $fillable = [
         'name',
-        'email',
+        'email',          // readonly, but still fillable if needed
         'password',
+        'phone_number',
+        'birthdate',
+        'address',
+        'city',
+        'profile_picture', // also include this if you want to update it via mass assignment
     ];
 
     protected $hidden = [
@@ -27,6 +32,7 @@ class User extends Authenticatable implements MustVerifyEmail
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'birthdate' => 'date', // cast birthdate to date automatically
         ];
     }
 

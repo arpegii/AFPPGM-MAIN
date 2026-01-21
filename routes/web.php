@@ -2,54 +2,52 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentController;
-use Illuminate\Foundation\Auth\EmailVerificationRequest;
-use Illuminate\Http\Request;
+use App\Http\Controllers\EmailVerificationController;
+use App\Http\Controllers\PasswordController;
+use App\Http\Controllers\ProfileController;
 
+// Home / Login & Signup page
 Route::get('/', [AuthController::class, 'show'])->name('auth.form');
 
-// Login & Signup
+// Authentication
 Route::post('/login', [AuthController::class, 'login'])->name('login');
 Route::post('/signup', [AuthController::class, 'signup'])->name('signup');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
-/*
-|--------------------------------------------------------------------------
-| Email Verification Routes
-|--------------------------------------------------------------------------
-*/
+// Email verification routes
+Route::middleware('auth')->group(function () {
+    Route::get('/email/verify', [EmailVerificationController::class, 'notice'])
+        ->name('verification.notice');
 
-// Handle verification link
-Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
-    $request->fulfill();
+    Route::get('/email/verify/{id}/{hash}', [EmailVerificationController::class, 'verify'])
+        ->middleware('signed')
+        ->name('verification.verify');
 
-    // Redirect back to signup/login page with flash to show modal
-    return redirect()->route('auth.form')->with('resent', true);
-})->middleware(['auth', 'signed'])->name('verification.verify');
+    Route::post('/email/verification-notification', [EmailVerificationController::class, 'resend'])
+        ->middleware('throttle:6,1')
+        ->name('verification.resend');
+});
 
-// Resend verification email
-Route::post('/email/verification-notification', function (Request $request) {
-    $request->user()->sendEmailVerificationNotification();
-    return redirect()->route('auth.form')->with('resent', true);
-})->middleware(['auth', 'throttle:6,1'])->name('verification.resend');
-
-/*
-|--------------------------------------------------------------------------
-| Protected Routes (authenticated + verified)
-|--------------------------------------------------------------------------
-*/
+// Protected routes
 Route::middleware(['auth', 'verified'])->group(function () {
 
-    Route::get('/dashboard', function () {
-        return view('dashboard');
-    })->name('dashboard');
+    // Dashboard / Profile page
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    Route::get('/documents/create', [DocumentController::class, 'create'])
-        ->name('document.create');
+    // Document routes
+    Route::get('/documents/create', [DocumentController::class, 'create'])->name('document.create');
+    Route::post('/documents', [DocumentController::class, 'store'])->name('document.store');
+    Route::get('/documents', [DocumentController::class, 'index'])->name('document.index');
 
-    Route::post('/documents', [DocumentController::class, 'store'])
-        ->name('document.store');
+    // Profile routes
+    Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
+    Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password.update');
+    Route::post('/profile/upload', [ProfileController::class, 'upload'])->name('profile.upload');
+    Route::delete('/profile/remove', [ProfileController::class, 'remove'])->name('profile.remove');
 
-    Route::get('/documents', [DocumentController::class, 'index'])
-        ->name('document.index');
+    // Change password route
+    Route::post('/change-password', [PasswordController::class, 'update'])->name('password.update');
 });
